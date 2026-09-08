@@ -73,6 +73,9 @@
 .additionalNumber{font-weight:900;color:#fecaca}
 .removePendingBtn{border:0;border-radius:8px;padding:7px 10px;background:#475569;color:#fff;font-weight:800;cursor:pointer}
 .additionalItem textarea{width:100%;min-height:76px;resize:vertical;padding:11px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:#020617;color:#fff;font:inherit}
+.additionalPhotosTitle{font-size:13px;font-weight:900;color:#fecaca;margin-top:12px}
+.additionalPrintPhotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.additionalPrintPhotos img{width:100%;max-height:180px;object-fit:cover;border-radius:8px}
 .additionalPrintCard{display:none}
 @media print{
  .additionalBox{display:none!important}
@@ -108,13 +111,16 @@ function additionalBlock(sectionIndex){
 function addAdditionalPending(box,data={},skip=false){
   const list=box.querySelector('.additionalList');
   const item=document.createElement('div');
+  const uid=data.uid||('ap_'+box.dataset.section+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8));
   item.className='additionalItem';
-  item.innerHTML=`<div class="additionalItemTop"><div class="additionalNumber"></div><button type="button" class="removePendingBtn">REMOVER</button></div><label>DESCRIÇÃO DA PENDÊNCIA</label><textarea class="additionalDesc" placeholder="Descreva a pendência adicional..."></textarea><label>NÚMERO DO CHAMADO</label><input class="additionalTicket" type="text" placeholder="Informe o número do chamado">`;
+  item.dataset.uid=uid;
+  item.innerHTML=`<div class="additionalItemTop"><div class="additionalNumber"></div><button type="button" class="removePendingBtn">REMOVER</button></div><label>DESCRIÇÃO DA PENDÊNCIA</label><textarea class="additionalDesc" placeholder="Descreva a pendência adicional..."></textarea><label>NÚMERO DO CHAMADO</label><input class="additionalTicket" type="text" placeholder="Informe o número do chamado"><div class="additionalPhotosTitle">FOTOS DA PENDÊNCIA</div><div class="photoGrid">${slot(uid+'f1','FOTO 1')}${slot(uid+'f2','FOTO 2')}${slot(uid+'f3','FOTO 3')}</div>`;
   item.querySelector('.additionalDesc').value=data.description||'';
   item.querySelector('.additionalTicket').value=data.ticket||'';
-  item.querySelectorAll('textarea,input').forEach(el=>el.addEventListener('input',schedule));
+  item.querySelectorAll('textarea,input[type="text"]').forEach(el=>el.addEventListener('input',schedule));
   item.querySelector('.removePendingBtn').addEventListener('click',()=>{item.remove();refreshAdditional(box);schedule()});
   list.appendChild(item);
+  [1,2,3].forEach(i=>setTimeout(()=>bindP(uid+'f'+i),0));
   refreshAdditional(box);
   if(!skip)schedule();
 }
@@ -126,7 +132,7 @@ function refreshAdditional(box){
 function collectAdditional(){
   const out={};
   document.querySelectorAll('.additionalBox').forEach(box=>{
-    const items=[...box.querySelectorAll('.additionalItem')].map(item=>({description:item.querySelector('.additionalDesc').value.trim(),ticket:item.querySelector('.additionalTicket').value.trim()}));
+    const items=[...box.querySelectorAll('.additionalItem')].map(item=>({uid:item.dataset.uid,description:item.querySelector('.additionalDesc').value.trim(),ticket:item.querySelector('.additionalTicket').value.trim()}));
     if(items.length)out[box.dataset.section]=items;
   });
   return out;
@@ -203,7 +209,9 @@ function buildOrderedPrint(){
           const ticket=item.querySelector('.additionalTicket').value.trim();
           const pc=document.createElement('div');
           pc.className='additionalPrintCard';
-          pc.innerHTML=`<div class="additionalPrintTitle">PENDÊNCIA ADICIONAL — ${esc(sectionTitle)}</div><div class="additionalPrintLine"><strong>PENDÊNCIA ${idx+1}:</strong> ${esc(desc||'Sem descrição informada')}</div><div class="additionalPrintLine"><strong>NÚMERO DO CHAMADO:</strong> ${esc(ticket||'Não informado')}</div>`;
+          const photos=[...item.querySelectorAll('.preview img')].map(img=>img.src).filter(Boolean);
+          const photoHtml=photos.length?`<div class="additionalPrintPhotos">${photos.map(src=>`<img src="${src}">`).join('')}</div>`:'';
+          pc.innerHTML=`<div class="additionalPrintTitle">PENDÊNCIA ADICIONAL — ${esc(sectionTitle)}</div><div class="additionalPrintLine"><strong>PENDÊNCIA ${idx+1}:</strong> ${esc(desc||'Sem descrição informada')}</div><div class="additionalPrintLine"><strong>NÚMERO DO CHAMADO:</strong> ${esc(ticket||'Não informado')}</div>${photoHtml}`;
           host.appendChild(pc);
         });
       });
